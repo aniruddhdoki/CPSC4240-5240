@@ -266,7 +266,8 @@ def main():
         total_score += t_res["score"]
         total_max += t_res["max_score"]
         status = "PASSED" if t_res["score"] == 1 else "FAILED"
-        print(f"Test '{t_res['name']}': {status}")
+        
+        print(f"Test '{t_res['name']}': {status} ({t_res['time_elapsed_seconds']:.4f}s)")
 
     final_score = (total_score / total_max) * 100.0 if total_max > 0 else 0
     results = {"score": final_score, "output": "Autograder completed.", "tests": test_results}
