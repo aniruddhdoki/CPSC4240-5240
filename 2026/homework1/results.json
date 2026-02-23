@@ -1,0 +1,38 @@
+[
+    {
+        "size": 10,
+        "time_c": 0.00591276,
+        "time_f": 0.000493749,
+        "status": "OK"
+    },
+    {
+        "size": 50,
+        "time_c": 0.00266628,
+        "time_f": 0.0015457,
+        "status": "OK"
+    },
+    {
+        "size": 100,
+        "time_c": 0.0023429,
+        "time_f": 0.00307574,
+        "status": "OK"
+    },
+    {
+        "size": 150,
+        "time_c": 0.00359277,
+        "time_f": 0.00850739,
+        "status": "Perf Only"
+    },
+    {
+        "size": 500,
+        "time_c": 0.0290882,
+        "time_f": 0.0749462,
+        "status": "Perf Only"
+    },
+    {
+        "size": 1000,
+        "time_c": 0.29612,
+        "time_f": 0.752986,
+        "status": "Perf Only"
+    }
+]

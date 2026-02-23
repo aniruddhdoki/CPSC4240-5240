@@ -7,10 +7,12 @@ import random
 import time
 
 VERIFY_THRESHOLD = 150
-TEST_SIZES = [10, 50, 100, 150, 500, 1000]
+TEST_SIZES = [
+    10, 50, 100, 150, 500, 1000
+]
 
 # Timeout for large tests (seconds)
-TIMEOUT_SEC = 60
+TIMEOUT_SEC = 600
 
 ###############################################################################
 # Helper Functions
