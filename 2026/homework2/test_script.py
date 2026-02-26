@@ -2,6 +2,7 @@ import subprocess
 import sys
 import re
 import os
+import statistics
 
 TEST_CASES = [
     {"name": "Small (100k ints)",     "N": 100000,     "threads": 4, "seed": 99},
@@ -62,15 +63,16 @@ def main():
     results_map = {}
 
     for test in TEST_CASES:
-        overall_status, total_time = "PASS", 0.0
+        overall_status = "PASS"
+        attempt_times = []
         for iteration in range(NUM_ATTEMPTS):
             status, time_sec = run_test(exec_file, test)
             if status != "PASS":
                 overall_status = status
                 break
-            total_time += time_sec
+            attempt_times.append(time_sec)
 
-        time_sec = total_time/NUM_ATTEMPTS
+        time_sec = statistics.median(attempt_times) if attempt_times else 0.0
         status_str = f"\033[92m{status}\033[0m" if status == "PASS" else f"\033[91m{status}\033[0m"
         print(f"{test['name']:<25} | {test['N']:<10} | {test['threads']:<7} | {status_str:<15} | {time_sec:.4f}s")
 
