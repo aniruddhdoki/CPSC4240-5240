@@ -242,7 +242,7 @@ def compute_expected_output(data_str, query_str, k):
 # Reproducible seed
 random.seed(42)
 
-TEST_CASES = [
+BASE_TEST_CASES = [
     {
         "name": "Test 1: Simple 3 data, 1 query",
         "data": "3\n0.00 0.00\n3.00 0.00\n0.00 4.00\n",
@@ -260,7 +260,7 @@ TEST_CASES = [
 ]
 
 # ---------------------- ADDING LARGE TEST CASES ---------------------- #
-TEST_CASES += [
+LARGE_TEST_CASES = [
     {
         "name": "Large Test 3: 10^3 data, 10^3 queries",
         "data": generate_points(10**3),
@@ -288,6 +288,8 @@ TEST_CASES += [
     }
     # You can add an even larger test if desired, but these should suffice.
 ]
+
+TEST_CASES = BASE_TEST_CASES + LARGE_TEST_CASES
 
 ###############################################################################
 # Compile / Run / Compare
@@ -335,18 +337,23 @@ def run_student_program(test_case):
     out_lines = [ln.strip() for ln in out_lines if ln.strip()]
     return out_lines
 
-def run_tests():
+def run_tests(cases_to_run=None):
     """
     Compile once, then run all tests, printing results to stdout.
     Exit code 0 if all pass, 1 if any fail.
+
+    cases_to_run: optional list of test dicts (default: full TEST_CASES).
     """
+    if cases_to_run is None:
+        cases_to_run = TEST_CASES
+
     # 1. Compile
     if not compile_cpp_source():
         sys.exit(1)
 
     # 2. Run tests
     all_passed = True
-    for i, test in enumerate(TEST_CASES, start=1):
+    for i, test in enumerate(cases_to_run, start=1):
         print(f"\n=== Running Test {i}: {test['name']} ===")
         start = time.time()
 
@@ -390,4 +397,8 @@ def run_tests():
         sys.exit(1)
 
 if __name__ == "__main__":
-    run_tests()
+    if "--small" in sys.argv or "-s" in sys.argv:
+        print("[Info] Running base tests only (use no flag for full suite).\n")
+        run_tests(BASE_TEST_CASES)
+    else:
+        run_tests()
