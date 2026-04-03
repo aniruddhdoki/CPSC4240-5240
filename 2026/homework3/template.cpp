@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdio>
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -6,7 +7,6 @@
 #include <string>
 #include <algorithm>
 #include <limits>
-#include <iomanip>
 
 // Include ParlayLib (adjust the path if needed)
 #include "parlaylib/include/parlay/primitives.h"
@@ -14,6 +14,7 @@
 #include "parlaylib/include/parlay/range.h"
 #include "parlaylib/include/parlay/sequence.h"
 #include "parlaylib/include/parlay/utilities.h"
+#include "parlaylib/include/parlay/io.h"
 
 // A simple 2D point structure
 struct Point2D {
@@ -201,18 +202,32 @@ knn_search_all(const KDNode* root,
   return results;
 }
 
-parlay::sequence<Point2D> load_points_from_file(const std::string &filename) {
-  std::ifstream in(filename);
-  if (!in) return {};
-  int n = 0;
-  in >> n;
-  parlay::sequence<Point2D> pts;
-  pts.reserve(n);
-  for (int i = 0; i < n; i++) {
-    double x, y;
-    in >> x >> y;
-    pts.push_back(Point2D(x, y));
-  }
+static parlay::chars read_file_bytes(const std::string& filename) {
+  std::ifstream file(filename, std::ios::binary | std::ios::ate);
+  if (!file) return {};
+  std::streamoff len = file.tellg();
+  if (len <= 0) return {};
+  file.seekg(0, std::ios::beg);
+  parlay::chars buf = parlay::chars::uninitialized(static_cast<size_t>(len));
+  file.read(buf.data(), len);
+  return buf;
+}
+
+parlay::sequence<Point2D> load_points_from_file(const std::string& filename) {
+  auto buf = read_file_bytes(filename);
+  if (buf.empty()) return {};
+  auto tok = parlay::tokens(buf);
+  if (tok.empty()) return {};
+  int n = parlay::chars_to_int(tok[0]);
+  if (n <= 0) return {};
+  size_t need = static_cast<size_t>(1 + 2 * n);
+  if (tok.size() < need) return {};
+  parlay::sequence<Point2D> pts(n);
+  parlay::parallel_for(0, static_cast<size_t>(n), [&](size_t i) {
+    double x = parlay::chars_to_double(tok[1 + 2 * i]);
+    double y = parlay::chars_to_double(tok[1 + 2 * i + 1]);
+    pts[i] = Point2D(x, y);
+  });
   return pts;
 }
 
@@ -227,29 +242,42 @@ int main(int argc, char** argv) {
   std::string query_file = argv[2];
   int k = std::stoi(argv[3]);
 
-  auto data_points = load_points_from_file(data_file);
+  parlay::sequence<Point2D> data_points;
+  parlay::sequence<Point2D> query_points;
+  parlay::par_do(
+      [&] { data_points = load_points_from_file(data_file); },
+      [&] { query_points = load_points_from_file(query_file); });
+
   int N = (int)data_points.size();
 
   parlay::sequence<int> indices(N);
-  parlay::parallel_for(0, N, [&](int i){ indices[i] = i; });
+  parlay::parallel_for(0, N, [&](int i) { indices[i] = i; });
   KDNode* root = build_kd_tree(indices.cut(0, N), data_points, 0);
 
-  auto query_points = load_points_from_file(query_file);
   int Q = (int)query_points.size();
 
   auto results = knn_search_all(root, data_points, query_points, k);
 
-  std::cout << std::fixed << std::setprecision(2);
-  for (int q = 0; q < Q; q++) {
-    std::cout << "Query " << q << ": ("
-              << query_points[q].x << ", "
-              << query_points[q].y << ")\n";
-    std::cout << "  kNN: ";
-    for (auto &di : results[q]) {
-      std::cout << "(dist2=" << di.dist
-                << ", idx=" << di.index << ") ";
+  parlay::sequence<std::string> lines(Q);
+  parlay::parallel_for(0, Q, [&](int q) {
+    std::string s;
+    s.reserve(96 + (size_t)k * 40);
+    char buf[160];
+    std::snprintf(buf, sizeof(buf), "Query %d: (%.2f, %.2f)\n", q,
+                  query_points[q].x, query_points[q].y);
+    s.append(buf);
+    s.append("  kNN: ");
+    for (const auto& di : results[q]) {
+      std::snprintf(buf, sizeof(buf), "(dist2=%.2f, idx=%d) ", di.dist,
+                    di.index);
+      s.append(buf);
     }
-    std::cout << "\n";
+    s.push_back('\n');
+    lines[q] = std::move(s);
+  });
+
+  for (int q = 0; q < Q; q++) {
+    std::cout << lines[q];
   }
 
   return 0;
