@@ -62,7 +62,7 @@ KDNode* build_kd_tree(
     const parlay::sequence<Point2D>& points,
     int depth = 0
 ) {
-  size_t n = indices.size();
+  size_t n = indices.size(); 
   if (n == 0) {
     return nullptr;
   }
@@ -76,8 +76,8 @@ KDNode* build_kd_tree(
   }
 
   int axis = depth % 2;
-  parlay::sort_inplace(indices, [&](int a, int b) {
-    double va = (axis == 0) ? points[a].x : points[a].y;
+  parlay::sort_inplace(indices, [&](int a, int b) {         // use sort_inplace to optimize memory using a lambda function
+    double va = (axis == 0) ? points[a].x : points[a].y;    // 
     double vb = (axis == 0) ? points[b].x : points[b].y;
     if (va != vb) return va < vb;
     return a < b;
